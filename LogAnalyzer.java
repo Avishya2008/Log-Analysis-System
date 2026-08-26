@@ -14,34 +14,48 @@ public class LogAnalyzer {
     private int unknownCount = 0;
 
     // HTTP status frequency
-    private final Map<Integer, Integer> statusCounts = new HashMap<>();
+    private final Map<Integer, Integer> statusCounts =
+            new HashMap<>();
 
     // Recurring error patterns
-    private final Map<String, Integer> errorPatterns = new HashMap<>();
+    private final Map<String, Integer> errorPatterns =
+            new HashMap<>();
 
     // Predefined error signatures
-    private final List<String> errorSignatures = new ArrayList<>();
+    private final List<String> errorSignatures =
+            new ArrayList<>();
 
-    // HTTP status pattern
+    // Detect HTTP status codes such as 200, 404, 500
     private static final Pattern STATUS_PATTERN =
-            Pattern.compile("\"\\s*(\\d{3})\\s+");
+            Pattern.compile("\\b([1-5]\\d{2})\\b");
+
+    // Detect explicit severity levels
+    private static final Pattern SEVERITY_PATTERN =
+            Pattern.compile(
+                    "\\b(INFO|WARN|WARNING|ERROR|CRITICAL|FATAL)\\b",
+                    Pattern.CASE_INSENSITIVE
+            );
 
     public LogAnalyzer() {
 
-        // Predefined error signatures
+        // Error signatures
         errorSignatures.add("connection refused");
         errorSignatures.add("connection timeout");
         errorSignatures.add("timeout");
         errorSignatures.add("database error");
         errorSignatures.add("database connection");
         errorSignatures.add("out of memory");
+        errorSignatures.add("memory usage");
         errorSignatures.add("internal server error");
         errorSignatures.add("bad gateway");
         errorSignatures.add("service unavailable");
         errorSignatures.add("gateway timeout");
+        errorSignatures.add("file not found");
         errorSignatures.add("not found");
         errorSignatures.add("unauthorized");
         errorSignatures.add("forbidden");
+        errorSignatures.add("server connection lost");
+        errorSignatures.add("connection failed");
     }
 
     // =========================================================
@@ -54,24 +68,120 @@ public class LogAnalyzer {
             return;
         }
 
-        Matcher matcher = STATUS_PATTERN.matcher(line);
+        String trimmedLine = line.trim();
+        String lowerLine = trimmedLine.toLowerCase();
 
-        if (!matcher.find()) {
-            unknownCount++;
-            return;
+        boolean severityDetected = false;
+
+        // =====================================================
+        // 1. DETECT EXPLICIT SEVERITY
+        // =====================================================
+
+        Matcher severityMatcher =
+                SEVERITY_PATTERN.matcher(trimmedLine);
+
+        if (severityMatcher.find()) {
+
+            String severity =
+                    severityMatcher.group(1).toUpperCase();
+
+            switch (severity) {
+
+                case "INFO":
+                    infoCount++;
+                    severityDetected = true;
+                    break;
+
+                case "WARN":
+                case "WARNING":
+                    warningCount++;
+                    severityDetected = true;
+                    break;
+
+                case "ERROR":
+                    errorCount++;
+                    severityDetected = true;
+                    break;
+
+                case "CRITICAL":
+                case "FATAL":
+                    criticalCount++;
+                    severityDetected = true;
+                    break;
+
+                default:
+                    break;
+            }
         }
 
-        int statusCode = Integer.parseInt(matcher.group(1));
+        // =====================================================
+        // 2. DETECT HTTP STATUS CODE
+        // =====================================================
 
-        // Count HTTP status
-        statusCounts.put(
-                statusCode,
-                statusCounts.getOrDefault(statusCode, 0) + 1
-        );
+        Matcher statusMatcher =
+                STATUS_PATTERN.matcher(trimmedLine);
+
+        if (statusMatcher.find()) {
+
+            int statusCode =
+                    Integer.parseInt(
+                            statusMatcher.group(1)
+                    );
+
+            // Do not treat the date 2026 as an HTTP status.
+            if (statusCode >= 100 && statusCode <= 599) {
+
+                statusCounts.put(
+                        statusCode,
+                        statusCounts.getOrDefault(
+                                statusCode,
+                                0
+                        ) + 1
+                );
+
+                // If no explicit severity was found,
+                // classify using HTTP status code.
+                if (!severityDetected) {
+
+                    classifyHttpStatus(statusCode);
+
+                    severityDetected = true;
+                }
+            }
+        }
 
         // =====================================================
-        // SEVERITY CLASSIFICATION
+        // 3. DETECT ERROR SIGNATURES
         // =====================================================
+
+        for (String signature : errorSignatures) {
+
+            if (lowerLine.contains(signature)) {
+
+                errorPatterns.put(
+                        signature,
+                        errorPatterns.getOrDefault(
+                                signature,
+                                0
+                        ) + 1
+                );
+            }
+        }
+
+        // =====================================================
+        // 4. UNKNOWN LOG
+        // =====================================================
+
+        if (!severityDetected) {
+            unknownCount++;
+        }
+    }
+
+    // =========================================================
+    // CLASSIFY HTTP STATUS
+    // =========================================================
+
+    private void classifyHttpStatus(int statusCode) {
 
         if (statusCode >= 200 && statusCode < 400) {
 
@@ -83,38 +193,11 @@ public class LogAnalyzer {
 
         } else if (statusCode >= 500 && statusCode < 600) {
 
-            if (statusCode == 500 ||
-                statusCode == 502 ||
-                statusCode == 503 ||
-                statusCode == 504) {
-
-                criticalCount++;
-
-            } else {
-
-                errorCount++;
-            }
+            criticalCount++;
 
         } else {
 
             unknownCount++;
-        }
-
-        // =====================================================
-        // ERROR SIGNATURE DETECTION
-        // =====================================================
-
-        String lowerLine = line.toLowerCase();
-
-        for (String signature : errorSignatures) {
-
-            if (lowerLine.contains(signature)) {
-
-                errorPatterns.put(
-                        signature,
-                        errorPatterns.getOrDefault(signature, 0) + 1
-                );
-            }
         }
     }
 
@@ -175,11 +258,17 @@ public class LogAnalyzer {
 
         switch (status) {
 
+            case 100:
+                return "Continue";
+
             case 200:
                 return "OK";
 
             case 201:
                 return "Created";
+
+            case 204:
+                return "No Content";
 
             case 301:
                 return "Moved Permanently";
@@ -204,6 +293,12 @@ public class LogAnalyzer {
 
             case 404:
                 return "Resource Not Found";
+
+            case 408:
+                return "Request Timeout";
+
+            case 429:
+                return "Too Many Requests";
 
             case 500:
                 return "Internal Server Error";
@@ -231,7 +326,8 @@ public class LogAnalyzer {
 
     public String getStatusCountsJson() {
 
-        StringBuilder json = new StringBuilder();
+        StringBuilder json =
+                new StringBuilder();
 
         json.append("{");
 
@@ -263,38 +359,41 @@ public class LogAnalyzer {
 
     public String getErrorPatternsJson() {
 
-        StringBuilder json = new StringBuilder();
+        StringBuilder json =
+                new StringBuilder();
 
-        json.append("[");
+        json.append("{");
 
         boolean first = true;
 
         List<Map.Entry<String, Integer>> sorted =
-                new ArrayList<>(errorPatterns.entrySet());
+                new ArrayList<>(
+                        errorPatterns.entrySet()
+                );
 
         sorted.sort(
-                Map.Entry.<String, Integer>comparingByValue()
+                Map.Entry
+                        .<String, Integer>
+                        comparingByValue()
                         .reversed()
         );
 
-        for (Map.Entry<String, Integer> entry : sorted) {
+        for (Map.Entry<String, Integer> entry :
+                sorted) {
 
             if (!first) {
                 json.append(",");
             }
 
-            json.append("{")
-                    .append("\"pattern\":\"")
+            json.append("\"")
                     .append(escapeJson(entry.getKey()))
-                    .append("\",")
-                    .append("\"count\":")
-                    .append(entry.getValue())
-                    .append("}");
+                    .append("\":")
+                    .append(entry.getValue());
 
             first = false;
         }
 
-        json.append("]");
+        json.append("}");
 
         return json.toString();
     }
@@ -305,9 +404,15 @@ public class LogAnalyzer {
 
     private String escapeJson(String text) {
 
+        if (text == null) {
+            return "";
+        }
+
         return text
                 .replace("\\", "\\\\")
-                .replace("\"", "\\\"");
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     // =========================================================
@@ -323,7 +428,7 @@ public class LogAnalyzer {
 
         System.out.println(
                 "Total Entries Analyzed : "
-                + getTotalAnalyzed()
+                        + getTotalAnalyzed()
         );
 
         System.out.println();
@@ -331,23 +436,28 @@ public class LogAnalyzer {
         System.out.println("--------------------------------------");
 
         System.out.println(
-                "INFO                  : " + infoCount
+                "INFO                  : "
+                        + infoCount
         );
 
         System.out.println(
-                "WARNING               : " + warningCount
+                "WARNING               : "
+                        + warningCount
         );
 
         System.out.println(
-                "ERROR                 : " + errorCount
+                "ERROR                 : "
+                        + errorCount
         );
 
         System.out.println(
-                "CRITICAL              : " + criticalCount
+                "CRITICAL              : "
+                        + criticalCount
         );
 
         System.out.println(
-                "UNKNOWN               : " + unknownCount
+                "UNKNOWN               : "
+                        + unknownCount
         );
 
         System.out.println();
@@ -357,7 +467,8 @@ public class LogAnalyzer {
         statusCounts.entrySet()
                 .stream()
                 .sorted(
-                        Map.Entry.<Integer, Integer>
+                        Map.Entry
+                                .<Integer, Integer>
                                 comparingByValue()
                                 .reversed()
                 )
@@ -365,11 +476,13 @@ public class LogAnalyzer {
 
                     System.out.println(
                             "HTTP "
-                            + entry.getKey()
-                            + " - "
-                            + getStatusDescription(entry.getKey())
-                            + " : "
-                            + entry.getValue()
+                                    + entry.getKey()
+                                    + " - "
+                                    + getStatusDescription(
+                                            entry.getKey()
+                                    )
+                                    + " : "
+                                    + entry.getValue()
                     );
                 });
 
@@ -388,7 +501,8 @@ public class LogAnalyzer {
             errorPatterns.entrySet()
                     .stream()
                     .sorted(
-                            Map.Entry.<String, Integer>
+                            Map.Entry
+                                    .<String, Integer>
                                     comparingByValue()
                                     .reversed()
                     )
@@ -397,13 +511,15 @@ public class LogAnalyzer {
 
                         System.out.println(
                                 entry.getKey()
-                                + " : "
-                                + entry.getValue()
-                                + " occurrences"
+                                        + " : "
+                                        + entry.getValue()
+                                        + " occurrences"
                         );
                     });
         }
 
-        System.out.println("======================================");
+        System.out.println(
+                "======================================"
+        );
     }
 }
