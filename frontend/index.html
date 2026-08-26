@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Log Analysis System</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 25px 40px;
+        }
+
+        header h1 {
+            font-size: 28px;
+        }
+
+        header p {
+            margin-top: 7px;
+            color: #cbd5e1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .upload-box {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .upload-box h2 {
+            margin-bottom: 10px;
+        }
+
+        .upload-box p {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            background: #f8fafc;
+        }
+
+        input[type="file"] {
+            margin: 10px;
+            padding: 10px;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #analyzeBtn {
+            background: #2563eb;
+            color: white;
+        }
+
+        #sampleBtn {
+            background: #475569;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        #fileName {
+            margin-top: 10px;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        #statusMessage {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard h2 {
+            margin-bottom: 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+        }
+
+        .card h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .card .number {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .total {
+            border-left: 5px solid #2563eb;
+        }
+
+        .info {
+            border-left: 5px solid #16a34a;
+        }
+
+        .warning {
+            border-left: 5px solid #eab308;
+        }
+
+        .error {
+            border-left: 5px solid #f97316;
+        }
+
+        .critical {
+            border-left: 5px solid #dc2626;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+        }
+
+        .section h3 {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f8fafc;
+        }
+
+        .bar-container {
+            margin-bottom: 15px;
+        }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .bar-background {
+            width: 100%;
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .info-bar {
+            background: #16a34a;
+        }
+
+        .warning-bar {
+            background: #eab308;
+        }
+
+        .error-bar {
+            background: #f97316;
+        }
+
+        .critical-bar {
+            background: #dc2626;
+        }
+
+        .empty {
+            color: #64748b;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loader {
+            display: none;
+            margin: 15px auto;
+            border: 5px solid #e5e7eb;
+            border-top: 5px solid #2563eb;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Log Analysis System</h1>
+    <p>Efficient server log analysis using pattern matching and severity classification</p>
+</header>
+
+<div class="container">
+
+    <!-- UPLOAD SECTION -->
+    <div class="upload-box">
+
+        <h2>Upload Log Dataset</h2>
+
+        <p>
+            Upload a server log file and analyze recurring errors,
+            HTTP status codes and severity levels.
+        </p>
+
+        <div class="file-input">
+
+            <input
+                type="file"
+                id="logFile"
+                accept=".log,.txt,.csv"
+            >
+
+            <div id="fileName">
+                No file selected
+            </div>
+
+        </div>
+
+        <button id="analyzeBtn" onclick="uploadAndAnalyze()">
+            Analyze Uploaded File
+        </button>
+
+        <button id="sampleBtn" onclick="analyzeSample()">
+            Analyze Sample Dataset
+        </button>
+
+        <div class="loader" id="loader"></div>
+
+        <div id="statusMessage"></div>
+
+    </div>
+
+
+    <!-- DASHBOARD -->
+    <div class="dashboard" id="dashboard">
+
+        <h2>Analysis Results</h2>
+
+        <!-- SUMMARY CARDS -->
+
+        <div class="cards">
+
+            <div class="card total">
+                <h3>TOTAL LOGS</h3>
+                <div class="number" id="totalLogs">0</div>
+            </div>
+
+            <div class="card info">
+                <h3>INFO</h3>
+                <div class="number" id="infoCount">0</div>
+            </div>
+
+            <div class="card warning">
+                <h3>WARNING</h3>
+                <div class="number" id="warningCount">0</div>
+            </div>
+
+            <div class="card error">
+                <h3>ERROR</h3>
+                <div class="number" id="errorCount">0</div>
+            </div>
+
+            <div class="card critical">
+                <h3>CRITICAL</h3>
+                <div class="number" id="criticalCount">0</div>
+            </div>
+
+        </div>
+
+
+        <!-- SEVERITY DISTRIBUTION -->
+
+        <div class="section">
+
+            <h3>Severity Distribution</h3>
+
+            <div class="bar-container">
+                <div class="bar-label">
+                    <span>INFO</span>
+                    <span id="infoPercent">0%</span>
+                </div>
+
+                <div class="bar-background">
+                    <div
+                        class="bar info-bar"
+                        id="infoBar"
+                        style="width:0%">
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="bar-container">
+                <div class="bar-label">
+                    <span>WARNING</span>
+                    <span id="warningPercent">0%</span>
+                </div>
+
+                <div class="bar-background">
+                    <div
+                        class="bar warning-bar"
+                        id="warningBar"
+                        style="width:0%">
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="bar-container">
+                <div class="bar-label">
+                    <span>ERROR</span>
+                    <span id="errorPercent">0%</span>
+                </div>
+
+                <div class="bar-background">
+                    <div
+                        class="bar error-bar"
+                        id="errorBar"
+                        style="width:0%">
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="bar-container">
+                <div class="bar-label">
+                    <span>CRITICAL</span>
+                    <span id="criticalPercent">0%</span>
+                </div>
+
+                <div class="bar-background">
+                    <div
+                        class="bar critical-bar"
+                        id="criticalBar"
+                        style="width:0%">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- HTTP STATUS CODES -->
+
+        <div class="section">
+
+            <h3>HTTP Status Code Frequency</h3>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>HTTP Status</th>
+                        <th>Description</th>
+                        <th>Occurrences</th>
+                    </tr>
+                </thead>
+
+                <tbody id="statusTable">
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- RECURRING ERROR PATTERNS -->
+
+        <div class="section">
+
+            <h3>Recurring Error Patterns</h3>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Description</th>
+                        <th>Occurrences</th>
+                    </tr>
+                </thead>
+
+                <tbody id="errorTable">
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    const fileInput = document.getElementById("logFile");
+
+    const fileName = document.getElementById("fileName");
+
+    fileInput.addEventListener("change", function () {
+
+        if (fileInput.files.length > 0) {
+
+            fileName.textContent =
+                "Selected file: " +
+                fileInput.files[0].name;
+
+        } else {
+
+            fileName.textContent =
+                "No file selected";
+        }
+    });
+
+
+    // =========================================================
+    // UPLOAD USER FILE
+    // =========================================================
+
+    async function uploadAndAnalyze() {
+
+        if (fileInput.files.length === 0) {
+
+            showStatus(
+                "Please select a log file first.",
+                "red"
+            );
+
+            return;
+        }
+
+        const file = fileInput.files[0];
+
+        const formData = new FormData();
+
+        formData.append("logFile", file);
+
+        showLoading(true);
+
+        showStatus(
+            "Uploading and analyzing " + file.name + "...",
+            "#2563eb"
+        );
+
+        try {
+
+            const response = await fetch(
+                "/api/upload",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Server returned HTTP " +
+                    response.status
+                );
+            }
+
+            const data =
+                await response.json();
+
+            displayResults(data);
+
+            showStatus(
+                "Analysis completed successfully!",
+                "#16a34a"
+            );
+
+        } catch (error) {
+
+            console.error(error);
+
+            showStatus(
+                "Error: " + error.message,
+                "red"
+            );
+
+        } finally {
+
+            showLoading(false);
+        }
+    }
+
+
+    // =========================================================
+    // ANALYZE YOUR ORIGINAL SAMPLE DATASET
+    // =========================================================
+
+    async function analyzeSample() {
+
+        showLoading(true);
+
+        showStatus(
+            "Analyzing sample dataset...",
+            "#2563eb"
+        );
+
+        try {
+
+            const response = await fetch(
+                "/api/analyze"
+            );
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Unable to analyze sample dataset"
+                );
+            }
+
+            const data =
+                await response.json();
+
+            displayResults(data);
+
+            showStatus(
+                "Sample dataset analyzed successfully!",
+                "#16a34a"
+            );
+
+        } catch (error) {
+
+            console.error(error);
+
+            showStatus(
+                "Error: " + error.message,
+                "red"
+            );
+
+        } finally {
+
+            showLoading(false);
+        }
+    }
+
+
+    // =========================================================
+    // DISPLAY RESULTS
+    // =========================================================
+
+    function displayResults(data) {
+
+        document.getElementById("dashboard")
+            .style.display = "block";
+
+
+        document.getElementById("totalLogs")
+            .textContent =
+            formatNumber(data.totalLogs || 0);
+
+
+        document.getElementById("infoCount")
+            .textContent =
+            formatNumber(data.info || 0);
+
+
+        document.getElementById("warningCount")
+            .textContent =
+            formatNumber(data.warnings || 0);
+
+
+        document.getElementById("errorCount")
+            .textContent =
+            formatNumber(data.errors || 0);
+
+
+        document.getElementById("criticalCount")
+            .textContent =
+            formatNumber(data.critical || 0);
+
+
+        updateSeverityBars(data);
+
+
+        displayStatusCodes(
+            data.statusCounts || {}
+        );
+
+
+        displayErrorPatterns(
+            data.errorPatterns || {}
+        );
+
+
+        window.scrollTo({
+            top: document.getElementById("dashboard")
+                .offsetTop,
+            behavior: "smooth"
+        });
+    }
+
+
+    // =========================================================
+    // SEVERITY BARS
+    // =========================================================
+
+    function updateSeverityBars(data) {
+
+        const total =
+            Number(data.totalLogs || 0);
+
+        if (total === 0) {
+            return;
+        }
+
+        const info =
+            Number(data.info || 0);
+
+        const warning =
+            Number(data.warnings || 0);
+
+        const error =
+            Number(data.errors || 0);
+
+        const critical =
+            Number(data.critical || 0);
+
+
+        setBar(
+            "infoBar",
+            "infoPercent",
+            info,
+            total
+        );
+
+
+        setBar(
+            "warningBar",
+            "warningPercent",
+            warning,
+            total
+        );
+
+
+        setBar(
+            "errorBar",
+            "errorPercent",
+            error,
+            total
+        );
+
+
+        setBar(
+            "criticalBar",
+            "criticalPercent",
+            critical,
+            total
+        );
+    }
+
+
+    function setBar(
+        barId,
+        percentId,
+        value,
+        total
+    ) {
+
+        const percentage =
+            ((value / total) * 100)
+            .toFixed(2);
+
+        document.getElementById(barId)
+            .style.width =
+            percentage + "%";
+
+        document.getElementById(percentId)
+            .textContent =
+            percentage + "%";
+    }
+
+
+    // =========================================================
+    // HTTP STATUS TABLE
+    // =========================================================
+
+    function displayStatusCodes(statusCounts) {
+
+        const table =
+            document.getElementById("statusTable");
+
+        table.innerHTML = "";
+
+        const entries =
+            Object.entries(statusCounts);
+
+
+        if (entries.length === 0) {
+
+            table.innerHTML =
+                '<tr><td colspan="3" class="empty">' +
+                'No HTTP status codes detected.' +
+                '</td></tr>';
+
+            return;
+        }
+
+
+        entries.sort(
+            (a, b) =>
+                Number(b[1]) - Number(a[1])
+        );
+
+
+        entries.forEach(
+            ([status, count]) => {
+
+                const row =
+                    document.createElement("tr");
+
+                row.innerHTML =
+                    "<td>" +
+                    status +
+                    "</td>" +
+
+                    "<td>" +
+                    getStatusDescription(
+                        Number(status)
+                    ) +
+                    "</td>" +
+
+                    "<td>" +
+                    formatNumber(count) +
+                    "</td>";
+
+                table.appendChild(row);
+            }
+        );
+    }
+
+
+    // =========================================================
+    // ERROR PATTERNS
+    // =========================================================
+
+    function displayErrorPatterns(
+        errorPatterns
+    ) {
+
+        const table =
+            document.getElementById("errorTable");
+
+        table.innerHTML = "";
+
+
+        let entries =
+            Object.entries(errorPatterns);
+
+
+        if (entries.length === 0) {
+
+            table.innerHTML =
+                '<tr><td colspan="3" class="empty">' +
+                'No recurring error patterns found.' +
+                '</td></tr>';
+
+            return;
+        }
+
+
+        entries.sort(
+            (a, b) =>
+                Number(b[1].count || b[1]) -
+                Number(a[1].count || a[1])
+        );
+
+
+        entries.slice(0, 10).forEach(
+            ([pattern, value]) => {
+
+                let count;
+                let description;
+
+                if (
+                    typeof value === "object"
+                ) {
+
+                    count =
+                        value.count || 0;
+
+                    description =
+                        value.description ||
+                        pattern;
+
+                } else {
+
+                    count = value;
+
+                    description =
+                        getStatusDescription(
+                            Number(pattern)
+                        );
+                }
+
+
+                const row =
+                    document.createElement("tr");
+
+                row.innerHTML =
+                    "<td>" +
+                    pattern +
+                    "</td>" +
+
+                    "<td>" +
+                    description +
+                    "</td>" +
+
+                    "<td>" +
+                    formatNumber(count) +
+                    "</td>";
+
+                table.appendChild(row);
+            }
+        );
+    }
+
+
+    // =========================================================
+    // STATUS DESCRIPTIONS
+    // =========================================================
+
+    function getStatusDescription(status) {
+
+        const descriptions = {
+
+            200: "OK",
+            201: "Created",
+            301: "Moved Permanently",
+            302: "Found",
+            303: "See Other",
+            304: "Not Modified",
+
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden / Access Denied",
+            404: "Resource Not Found",
+
+            500: "Internal Server Error",
+            501: "Not Implemented",
+            502: "Bad Gateway",
+            503: "Service Unavailable",
+            504: "Gateway Timeout"
+        };
+
+        return descriptions[status]
+            || "HTTP Status";
+    }
+
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+
+    function formatNumber(number) {
+
+        return Number(number)
+            .toLocaleString("en-IN");
+    }
+
+
+    function showLoading(show) {
+
+        document.getElementById("loader")
+            .style.display =
+            show ? "block" : "none";
+
+        document.getElementById("analyzeBtn")
+            .disabled = show;
+
+        document.getElementById("sampleBtn")
+            .disabled = show;
+    }
+
+
+    function showStatus(
+        message,
+        color
+    ) {
+
+        const element =
+            document.getElementById(
+                "statusMessage"
+            );
+
+        element.textContent = message;
+
+        element.style.color = color;
+    }
+
+</script>
+
+</body>
+</html>
