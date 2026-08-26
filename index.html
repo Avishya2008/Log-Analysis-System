@@ -1,12 +1,16 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Log Analysis System</title>
 
     <style>
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -108,6 +112,7 @@
         #statusMessage {
             margin-top: 15px;
             font-weight: bold;
+            min-height: 22px;
         }
 
         .dashboard {
@@ -255,12 +260,14 @@
         }
 
         @media (max-width: 900px) {
+
             .cards {
                 grid-template-columns: repeat(2, 1fr);
             }
         }
 
         @media (max-width: 600px) {
+
             .cards {
                 grid-template-columns: 1fr;
             }
@@ -268,20 +275,34 @@
             header {
                 padding: 20px;
             }
+
+            .upload-box {
+                padding: 20px;
+            }
         }
+
     </style>
+
 </head>
 
 <body>
 
 <header>
+
     <h1>Log Analysis System</h1>
-    <p>Efficient server log analysis using pattern matching and severity classification</p>
+
+    <p>
+        Efficient server log analysis using pattern matching
+        and severity classification
+    </p>
+
 </header>
+
 
 <div class="container">
 
     <!-- UPLOAD SECTION -->
+
     <div class="upload-box">
 
         <h2>Upload Log Dataset</h2>
@@ -305,15 +326,24 @@
 
         </div>
 
-        <button id="analyzeBtn" onclick="uploadAndAnalyze()">
+        <button
+            id="analyzeBtn"
+            onclick="uploadAndAnalyze()"
+        >
             Analyze Uploaded File
         </button>
 
-        <button id="sampleBtn" onclick="analyzeSample()">
+        <button
+            id="sampleBtn"
+            onclick="analyzeSample()"
+        >
             Analyze Sample Dataset
         </button>
 
-        <div class="loader" id="loader"></div>
+        <div
+            class="loader"
+            id="loader"
+        ></div>
 
         <div id="statusMessage"></div>
 
@@ -321,37 +351,86 @@
 
 
     <!-- DASHBOARD -->
-    <div class="dashboard" id="dashboard">
+
+    <div
+        class="dashboard"
+        id="dashboard"
+    >
 
         <h2>Analysis Results</h2>
+
 
         <!-- SUMMARY CARDS -->
 
         <div class="cards">
 
             <div class="card total">
+
                 <h3>TOTAL LOGS</h3>
-                <div class="number" id="totalLogs">0</div>
+
+                <div
+                    class="number"
+                    id="totalLogs"
+                >
+                    0
+                </div>
+
             </div>
+
 
             <div class="card info">
+
                 <h3>INFO</h3>
-                <div class="number" id="infoCount">0</div>
+
+                <div
+                    class="number"
+                    id="infoCount"
+                >
+                    0
+                </div>
+
             </div>
+
 
             <div class="card warning">
+
                 <h3>WARNING</h3>
-                <div class="number" id="warningCount">0</div>
+
+                <div
+                    class="number"
+                    id="warningCount"
+                >
+                    0
+                </div>
+
             </div>
+
 
             <div class="card error">
+
                 <h3>ERROR</h3>
-                <div class="number" id="errorCount">0</div>
+
+                <div
+                    class="number"
+                    id="errorCount"
+                >
+                    0
+                </div>
+
             </div>
 
+
             <div class="card critical">
+
                 <h3>CRITICAL</h3>
-                <div class="number" id="criticalCount">0</div>
+
+                <div
+                    class="number"
+                    id="criticalCount"
+                >
+                    0
+                </div>
+
             </div>
 
         </div>
@@ -363,67 +442,84 @@
 
             <h3>Severity Distribution</h3>
 
+
             <div class="bar-container">
+
                 <div class="bar-label">
                     <span>INFO</span>
                     <span id="infoPercent">0%</span>
                 </div>
 
                 <div class="bar-background">
+
                     <div
                         class="bar info-bar"
                         id="infoBar"
-                        style="width:0%">
-                    </div>
+                        style="width:0%"
+                    ></div>
+
                 </div>
+
             </div>
 
 
             <div class="bar-container">
+
                 <div class="bar-label">
                     <span>WARNING</span>
                     <span id="warningPercent">0%</span>
                 </div>
 
                 <div class="bar-background">
+
                     <div
                         class="bar warning-bar"
                         id="warningBar"
-                        style="width:0%">
-                    </div>
+                        style="width:0%"
+                    ></div>
+
                 </div>
+
             </div>
 
 
             <div class="bar-container">
+
                 <div class="bar-label">
                     <span>ERROR</span>
                     <span id="errorPercent">0%</span>
                 </div>
 
                 <div class="bar-background">
+
                     <div
                         class="bar error-bar"
                         id="errorBar"
-                        style="width:0%">
-                    </div>
+                        style="width:0%"
+                    ></div>
+
                 </div>
+
             </div>
 
 
             <div class="bar-container">
+
                 <div class="bar-label">
                     <span>CRITICAL</span>
                     <span id="criticalPercent">0%</span>
                 </div>
 
                 <div class="bar-background">
+
                     <div
                         class="bar critical-bar"
                         id="criticalBar"
-                        style="width:0%">
-                    </div>
+                        style="width:0%"
+                    ></div>
+
                 </div>
+
             </div>
 
         </div>
@@ -438,15 +534,16 @@
             <table>
 
                 <thead>
+
                     <tr>
                         <th>HTTP Status</th>
                         <th>Description</th>
                         <th>Occurrences</th>
                     </tr>
+
                 </thead>
 
-                <tbody id="statusTable">
-                </tbody>
+                <tbody id="statusTable"></tbody>
 
             </table>
 
@@ -462,15 +559,16 @@
             <table>
 
                 <thead>
+
                     <tr>
                         <th>Status</th>
                         <th>Description</th>
                         <th>Occurrences</th>
                     </tr>
+
                 </thead>
 
-                <tbody id="errorTable">
-                </tbody>
+                <tbody id="errorTable"></tbody>
 
             </table>
 
@@ -483,24 +581,35 @@
 
 <script>
 
-    const fileInput = document.getElementById("logFile");
+    // =========================================================
+    // FILE SELECTION
+    // =========================================================
 
-    const fileName = document.getElementById("fileName");
+    const fileInput =
+        document.getElementById("logFile");
 
-    fileInput.addEventListener("change", function () {
+    const fileName =
+        document.getElementById("fileName");
 
-        if (fileInput.files.length > 0) {
 
-            fileName.textContent =
-                "Selected file: " +
-                fileInput.files[0].name;
+    fileInput.addEventListener(
+        "change",
+        function () {
 
-        } else {
+            if (fileInput.files.length > 0) {
 
-            fileName.textContent =
-                "No file selected";
+                fileName.textContent =
+                    "Selected file: " +
+                    fileInput.files[0].name;
+
+            } else {
+
+                fileName.textContent =
+                    "No file selected";
+            }
+
         }
-    });
+    );
 
 
     // =========================================================
@@ -519,53 +628,118 @@
             return;
         }
 
-        const file = fileInput.files[0];
 
-        const formData = new FormData();
+        const file =
+            fileInput.files[0];
 
-        formData.append("logFile", file);
 
         showLoading(true);
 
+
         showStatus(
-            "Uploading and analyzing " + file.name + "...",
+            "Uploading and analyzing " +
+            file.name +
+            "...",
             "#2563eb"
         );
 
+
         try {
 
-            const response = await fetch(
-                "/api/upload",
-                {
-                    method: "POST",
-                    body: formData
-                }
+            /*
+             * IMPORTANT:
+             *
+             * Server.java expects:
+             * multipart/form-data
+             *
+             * Therefore we use FormData here.
+             */
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "file",
+                file
             );
+
+
+            const response =
+                await fetch(
+                    "/api/upload",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+            const responseText =
+                await response.text();
+
+
+            console.log(
+                "Server response:",
+                responseText
+            );
+
 
             if (!response.ok) {
 
                 throw new Error(
                     "Server returned HTTP " +
-                    response.status
+                    response.status +
+                    ": " +
+                    responseText
                 );
             }
 
-            const data =
-                await response.json();
+
+            let data;
+
+
+            try {
+
+                data =
+                    JSON.parse(
+                        responseText
+                    );
+
+            } catch (error) {
+
+                throw new Error(
+                    "Invalid JSON received from server."
+                );
+            }
+
+
+            console.log(
+                "Analysis result:",
+                data
+            );
+
 
             displayResults(data);
+
 
             showStatus(
                 "Analysis completed successfully!",
                 "#16a34a"
             );
 
+
         } catch (error) {
 
-            console.error(error);
+            console.error(
+                "Upload error:",
+                error
+            );
+
 
             showStatus(
-                "Error: " + error.message,
+                "Error: " +
+                error.message,
                 "red"
             );
 
@@ -577,47 +751,75 @@
 
 
     // =========================================================
-    // ANALYZE YOUR ORIGINAL SAMPLE DATASET
+    // ANALYZE SAMPLE DATASET
     // =========================================================
 
     async function analyzeSample() {
 
         showLoading(true);
 
+
         showStatus(
             "Analyzing sample dataset...",
             "#2563eb"
         );
 
+
         try {
 
-            const response = await fetch(
-                "/api/analyze"
+            const response =
+                await fetch(
+                    "/api/analyze"
+                );
+
+
+            const responseText =
+                await response.text();
+
+
+            console.log(
+                "Sample response:",
+                responseText
             );
+
 
             if (!response.ok) {
 
                 throw new Error(
-                    "Unable to analyze sample dataset"
+                    "Server returned HTTP " +
+                    response.status +
+                    ": " +
+                    responseText
                 );
             }
 
+
             const data =
-                await response.json();
+                JSON.parse(
+                    responseText
+                );
+
 
             displayResults(data);
+
 
             showStatus(
                 "Sample dataset analyzed successfully!",
                 "#16a34a"
             );
 
+
         } catch (error) {
 
-            console.error(error);
+            console.error(
+                "Sample analysis error:",
+                error
+            );
+
 
             showStatus(
-                "Error: " + error.message,
+                "Error: " +
+                error.message,
                 "red"
             );
 
@@ -634,33 +836,50 @@
 
     function displayResults(data) {
 
-        document.getElementById("dashboard")
-            .style.display = "block";
+        document.getElementById(
+            "dashboard"
+        ).style.display =
+            "block";
 
 
-        document.getElementById("totalLogs")
-            .textContent =
-            formatNumber(data.totalLogs || 0);
+        document.getElementById(
+            "totalLogs"
+        ).textContent =
+            formatNumber(
+                data.totalLogs || 0
+            );
 
 
-        document.getElementById("infoCount")
-            .textContent =
-            formatNumber(data.info || 0);
+        document.getElementById(
+            "infoCount"
+        ).textContent =
+            formatNumber(
+                data.info || 0
+            );
 
 
-        document.getElementById("warningCount")
-            .textContent =
-            formatNumber(data.warnings || 0);
+        document.getElementById(
+            "warningCount"
+        ).textContent =
+            formatNumber(
+                data.warnings || 0
+            );
 
 
-        document.getElementById("errorCount")
-            .textContent =
-            formatNumber(data.errors || 0);
+        document.getElementById(
+            "errorCount"
+        ).textContent =
+            formatNumber(
+                data.errors || 0
+            );
 
 
-        document.getElementById("criticalCount")
-            .textContent =
-            formatNumber(data.critical || 0);
+        document.getElementById(
+            "criticalCount"
+        ).textContent =
+            formatNumber(
+                data.critical || 0
+            );
 
 
         updateSeverityBars(data);
@@ -676,9 +895,9 @@
         );
 
 
-        window.scrollTo({
-            top: document.getElementById("dashboard")
-                .offsetTop,
+        document.getElementById(
+            "dashboard"
+        ).scrollIntoView({
             behavior: "smooth"
         });
     }
@@ -691,54 +910,70 @@
     function updateSeverityBars(data) {
 
         const total =
-            Number(data.totalLogs || 0);
+            Number(
+                data.totalLogs || 0
+            );
+
 
         if (total === 0) {
+
+            setBar(
+                "infoBar",
+                "infoPercent",
+                0
+            );
+
+            setBar(
+                "warningBar",
+                "warningPercent",
+                0
+            );
+
+            setBar(
+                "errorBar",
+                "errorPercent",
+                0
+            );
+
+            setBar(
+                "criticalBar",
+                "criticalPercent",
+                0
+            );
+
             return;
         }
-
-        const info =
-            Number(data.info || 0);
-
-        const warning =
-            Number(data.warnings || 0);
-
-        const error =
-            Number(data.errors || 0);
-
-        const critical =
-            Number(data.critical || 0);
 
 
         setBar(
             "infoBar",
             "infoPercent",
-            info,
-            total
+            Number(data.info || 0) /
+            total * 100
         );
 
 
         setBar(
             "warningBar",
             "warningPercent",
-            warning,
-            total
+            Number(data.warnings || 0) /
+            total * 100
         );
 
 
         setBar(
             "errorBar",
             "errorPercent",
-            error,
-            total
+            Number(data.errors || 0) /
+            total * 100
         );
 
 
         setBar(
             "criticalBar",
             "criticalPercent",
-            critical,
-            total
+            Number(data.critical || 0) /
+            total * 100
         );
     }
 
@@ -746,21 +981,25 @@
     function setBar(
         barId,
         percentId,
-        value,
-        total
+        percentage
     ) {
 
-        const percentage =
-            ((value / total) * 100)
-            .toFixed(2);
+        const value =
+            Number(
+                percentage
+            ).toFixed(2);
 
-        document.getElementById(barId)
-            .style.width =
-            percentage + "%";
 
-        document.getElementById(percentId)
-            .textContent =
-            percentage + "%";
+        document.getElementById(
+            barId
+        ).style.width =
+            value + "%";
+
+
+        document.getElementById(
+            percentId
+        ).textContent =
+            value + "%";
     }
 
 
@@ -768,23 +1007,33 @@
     // HTTP STATUS TABLE
     // =========================================================
 
-    function displayStatusCodes(statusCounts) {
+    function displayStatusCodes(
+        statusCounts
+    ) {
 
         const table =
-            document.getElementById("statusTable");
+            document.getElementById(
+                "statusTable"
+            );
+
 
         table.innerHTML = "";
 
+
         const entries =
-            Object.entries(statusCounts);
+            Object.entries(
+                statusCounts
+            );
 
 
         if (entries.length === 0) {
 
             table.innerHTML =
-                '<tr><td colspan="3" class="empty">' +
+                '<tr>' +
+                '<td colspan="3" class="empty">' +
                 'No HTTP status codes detected.' +
-                '</td></tr>';
+                '</td>' +
+                '</tr>';
 
             return;
         }
@@ -792,7 +1041,8 @@
 
         entries.sort(
             (a, b) =>
-                Number(b[1]) - Number(a[1])
+                Number(b[1]) -
+                Number(a[1])
         );
 
 
@@ -800,22 +1050,28 @@
             ([status, count]) => {
 
                 const row =
-                    document.createElement("tr");
+                    document.createElement(
+                        "tr"
+                    );
+
 
                 row.innerHTML =
                     "<td>" +
-                    status +
+                    escapeHtml(status) +
                     "</td>" +
 
                     "<td>" +
-                    getStatusDescription(
-                        Number(status)
+                    escapeHtml(
+                        getStatusDescription(
+                            Number(status)
+                        )
                     ) +
                     "</td>" +
 
                     "<td>" +
                     formatNumber(count) +
                     "</td>";
+
 
                 table.appendChild(row);
             }
@@ -832,21 +1088,28 @@
     ) {
 
         const table =
-            document.getElementById("errorTable");
+            document.getElementById(
+                "errorTable"
+            );
+
 
         table.innerHTML = "";
 
 
-        let entries =
-            Object.entries(errorPatterns);
+        const entries =
+            Object.entries(
+                errorPatterns
+            );
 
 
         if (entries.length === 0) {
 
             table.innerHTML =
-                '<tr><td colspan="3" class="empty">' +
+                '<tr>' +
+                '<td colspan="3" class="empty">' +
                 'No recurring error patterns found.' +
-                '</td></tr>';
+                '</td>' +
+                '</tr>';
 
             return;
         }
@@ -854,58 +1117,70 @@
 
         entries.sort(
             (a, b) =>
-                Number(b[1].count || b[1]) -
-                Number(a[1].count || a[1])
+                Number(
+                    b[1]?.count || b[1]
+                ) -
+                Number(
+                    a[1]?.count || a[1]
+                )
         );
 
 
-        entries.slice(0, 10).forEach(
-            ([pattern, value]) => {
+        entries
+            .slice(0, 10)
+            .forEach(
+                ([pattern, value]) => {
 
-                let count;
-                let description;
+                    let count;
+                    let description;
 
-                if (
-                    typeof value === "object"
-                ) {
 
-                    count =
-                        value.count || 0;
+                    if (
+                        typeof value === "object"
+                    ) {
 
-                    description =
-                        value.description ||
-                        pattern;
+                        count =
+                            value.count || 0;
 
-                } else {
+                        description =
+                            value.description ||
+                            pattern;
 
-                    count = value;
+                    } else {
 
-                    description =
-                        getStatusDescription(
-                            Number(pattern)
+                        count =
+                            value;
+
+                        description =
+                            getStatusDescription(
+                                Number(pattern)
+                            );
+                    }
+
+
+                    const row =
+                        document.createElement(
+                            "tr"
                         );
+
+
+                    row.innerHTML =
+                        "<td>" +
+                        escapeHtml(pattern) +
+                        "</td>" +
+
+                        "<td>" +
+                        escapeHtml(description) +
+                        "</td>" +
+
+                        "<td>" +
+                        formatNumber(count) +
+                        "</td>";
+
+
+                    table.appendChild(row);
                 }
-
-
-                const row =
-                    document.createElement("tr");
-
-                row.innerHTML =
-                    "<td>" +
-                    pattern +
-                    "</td>" +
-
-                    "<td>" +
-                    description +
-                    "</td>" +
-
-                    "<td>" +
-                    formatNumber(count) +
-                    "</td>";
-
-                table.appendChild(row);
-            }
-        );
+            );
     }
 
 
@@ -913,12 +1188,17 @@
     // STATUS DESCRIPTIONS
     // =========================================================
 
-    function getStatusDescription(status) {
+    function getStatusDescription(
+        status
+    ) {
 
         const descriptions = {
 
             200: "OK",
             201: "Created",
+            202: "Accepted",
+            204: "No Content",
+
             301: "Moved Permanently",
             302: "Found",
             303: "See Other",
@@ -928,6 +1208,10 @@
             401: "Unauthorized",
             403: "Forbidden / Access Denied",
             404: "Resource Not Found",
+            405: "Method Not Allowed",
+            408: "Request Timeout",
+            409: "Conflict",
+            429: "Too Many Requests",
 
             500: "Internal Server Error",
             501: "Not Implemented",
@@ -936,8 +1220,11 @@
             504: "Gateway Timeout"
         };
 
-        return descriptions[status]
-            || "HTTP Status";
+
+        return (
+            descriptions[status] ||
+            "HTTP Status"
+        );
     }
 
 
@@ -945,24 +1232,37 @@
     // HELPERS
     // =========================================================
 
-    function formatNumber(number) {
+    function formatNumber(
+        number
+    ) {
 
         return Number(number)
             .toLocaleString("en-IN");
     }
 
 
-    function showLoading(show) {
+    function showLoading(
+        show
+    ) {
 
-        document.getElementById("loader")
-            .style.display =
-            show ? "block" : "none";
+        document.getElementById(
+            "loader"
+        ).style.display =
+            show
+                ? "block"
+                : "none";
 
-        document.getElementById("analyzeBtn")
-            .disabled = show;
 
-        document.getElementById("sampleBtn")
-            .disabled = show;
+        document.getElementById(
+            "analyzeBtn"
+        ).disabled =
+            show;
+
+
+        document.getElementById(
+            "sampleBtn"
+        ).disabled =
+            show;
     }
 
 
@@ -976,12 +1276,50 @@
                 "statusMessage"
             );
 
-        element.textContent = message;
 
-        element.style.color = color;
+        element.textContent =
+            message;
+
+
+        element.style.color =
+            color;
+    }
+
+
+    // =========================================================
+    // SAFE HTML
+    // =========================================================
+
+    function escapeHtml(
+        value
+    ) {
+
+        return String(value)
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
     }
 
 </script>
 
 </body>
+
 </html>
+```
