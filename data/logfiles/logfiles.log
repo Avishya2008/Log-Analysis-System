@@ -1,0 +1,11 @@
+2026-08-26 10:00:01 INFO Server started successfully
+2026-08-26 10:01:15 INFO User logged in successfully
+2026-08-26 10:02:30 WARNING High memory usage detected
+2026-08-26 10:03:10 ERROR Database connection failed
+2026-08-26 10:03:15 ERROR Database connection failed
+2026-08-26 10:04:20 INFO Request processed successfully
+2026-08-26 10:05:00 WARNING Slow response detected
+2026-08-26 10:06:12 ERROR File not found
+2026-08-26 10:06:15 ERROR File not found
+2026-08-26 10:07:30 CRITICAL Server connection lost
+2026-08-26 10:08:00 INFO Server restarted
