@@ -1,17 +1,14 @@
+```java
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.InputStreamReader;
-
 import java.net.InetSocketAddress;
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,12 +16,12 @@ import java.nio.file.Paths;
 
 public class Server {
 
+    // Your files are in the ROOT of the GitHub repository,
+    // not inside a "frontend" folder.
+    private static final String FRONTEND_PATH = ".";
+
     private static final String SAMPLE_FILE =
             "data/logfiles/logfiles.log";
-
-    private static final String FRONTEND_PATH =
-            "frontend";
-
 
     public static void main(String[] args) throws Exception {
 
@@ -32,55 +29,47 @@ public class Server {
         System.out.println("       LOG ANALYSIS WEB SERVER");
         System.out.println("======================================");
 
-        /*
-         * Render provides the PORT environment variable.
-         * When running locally, it will use port 8080.
-         */
-        int port = Integer.parseInt(
-                System.getenv().getOrDefault("PORT", "8080")
-        );
+        // Render provides the PORT environment variable.
+        // Locally it will use 8080.
+        int port = 8080;
 
-        /*
-         * Listen on 0.0.0.0 so Render can access the server.
-         */
+        String portEnvironment =
+                System.getenv("PORT");
+
+        if (portEnvironment != null
+                && !portEnvironment.isEmpty()) {
+
+            try {
+                port = Integer.parseInt(portEnvironment);
+            } catch (NumberFormatException ignored) {
+                port = 8080;
+            }
+        }
+
         HttpServer server = HttpServer.create(
                 new InetSocketAddress("0.0.0.0", port),
                 0
         );
 
-
-        // =====================================================
-        // WEBSITE
-        // =====================================================
-
+        // Serve website files from the ROOT folder
         server.createContext(
                 "/",
                 Server::serveFrontend
         );
 
-
-        // =====================================================
-        // ANALYZE ORIGINAL SAMPLE DATASET
-        // =====================================================
-
+        // Analyze sample dataset
         server.createContext(
                 "/api/analyze",
                 Server::analyzeSample
         );
 
-
-        // =====================================================
-        // ANALYZE UPLOADED DATASET
-        // =====================================================
-
+        // Upload and analyze user dataset
         server.createContext(
                 "/api/upload",
                 Server::uploadAndAnalyze
         );
 
-
         server.start();
-
 
         System.out.println();
         System.out.println("Server started successfully!");
@@ -88,16 +77,12 @@ public class Server {
         System.out.println("Port: " + port);
         System.out.println();
         System.out.println("Website:");
-        System.out.println(
-                "http://localhost:" + port
-        );
+        System.out.println("http://localhost:" + port);
         System.out.println();
         System.out.println("Upload API:");
-        System.out.println(
-                "http://localhost:" + port + "/api/upload"
-        );
+        System.out.println("http://localhost:" + port + "/api/upload");
         System.out.println();
-        System.out.println("Keep this terminal running.");
+        System.out.println("Keep this server running.");
     }
 
 
@@ -113,16 +98,13 @@ public class Server {
             String requestPath =
                     exchange.getRequestURI().getPath();
 
-
-            if (requestPath.equals("/")) {
+            if (requestPath.equals("/")
+                    || requestPath.isEmpty()) {
 
                 requestPath = "/index.html";
             }
 
-
-            /*
-             * Prevent directory traversal attacks.
-             */
+            // Security protection
             if (requestPath.contains("..")) {
 
                 sendResponse(
@@ -135,32 +117,21 @@ public class Server {
                 return;
             }
 
-
-            /*
-             * Remove the leading slash before joining paths.
-             */
+            // Remove leading slash
             String relativePath =
                     requestPath.startsWith("/")
                             ? requestPath.substring(1)
                             : requestPath;
 
-
             Path filePath =
                     Paths.get(
                             FRONTEND_PATH,
                             relativePath
-                    );
-
-
-            System.out.println(
-                    "Requested: " + requestPath
-            );
+                    ).normalize();
 
             System.out.println(
-                    "Looking for: "
-                            + filePath.toAbsolutePath()
+                    "Requested file: " + filePath
             );
-
 
             if (!Files.exists(filePath)
                     || Files.isDirectory(filePath)) {
@@ -175,41 +146,29 @@ public class Server {
                 return;
             }
 
-
             byte[] content =
                     Files.readAllBytes(filePath);
-
 
             String contentType =
                     getContentType(
                             filePath.toString()
                     );
 
-
             exchange.getResponseHeaders().set(
                     "Content-Type",
                     contentType
             );
-
-
-            exchange.getResponseHeaders().set(
-                    "Cache-Control",
-                    "no-cache"
-            );
-
 
             exchange.sendResponseHeaders(
                     200,
                     content.length
             );
 
-
             try (OutputStream output =
                          exchange.getResponseBody()) {
 
                 output.write(content);
             }
-
 
         } catch (Exception e) {
 
@@ -238,60 +197,46 @@ public class Server {
     private static String getContentType(
             String fileName) {
 
-        if (fileName.endsWith(".html")) {
+        String lower =
+                fileName.toLowerCase();
 
+        if (lower.endsWith(".html")) {
             return "text/html; charset=UTF-8";
         }
 
-
-        if (fileName.endsWith(".css")) {
-
+        if (lower.endsWith(".css")) {
             return "text/css; charset=UTF-8";
         }
 
-
-        if (fileName.endsWith(".js")) {
-
+        if (lower.endsWith(".js")) {
             return "application/javascript; charset=UTF-8";
         }
 
-
-        if (fileName.endsWith(".json")) {
-
+        if (lower.endsWith(".json")) {
             return "application/json; charset=UTF-8";
         }
 
-
-        if (fileName.endsWith(".png")) {
-
+        if (lower.endsWith(".png")) {
             return "image/png";
         }
 
-
-        if (fileName.endsWith(".jpg")
-                || fileName.endsWith(".jpeg")) {
+        if (lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")) {
 
             return "image/jpeg";
         }
 
-
-        if (fileName.endsWith(".gif")) {
-
+        if (lower.endsWith(".gif")) {
             return "image/gif";
         }
 
-
-        if (fileName.endsWith(".svg")) {
-
+        if (lower.endsWith(".svg")) {
             return "image/svg+xml";
         }
 
-
-        if (fileName.endsWith(".ico")) {
-
+        if (lower.endsWith(".ico")) {
             return "image/x-icon";
         }
-
 
         return "application/octet-stream";
     }
@@ -319,23 +264,32 @@ public class Server {
                 return;
             }
 
-
             LogAnalyzer analyzer =
                     new LogAnalyzer();
 
-
             int totalLines = 0;
 
+            Path samplePath =
+                    Paths.get(SAMPLE_FILE);
+
+            if (!Files.exists(samplePath)) {
+
+                sendError(
+                        exchange,
+                        "Sample log file not found: "
+                                + SAMPLE_FILE
+                );
+
+                return;
+            }
 
             try (BufferedReader reader =
                          new BufferedReader(
                                  new FileReader(
                                          SAMPLE_FILE
-                                 )
-                         )) {
+                                 ))) {
 
                 String line;
-
 
                 while ((line =
                         reader.readLine()) != null) {
@@ -346,13 +300,11 @@ public class Server {
                 }
             }
 
-
             String json =
                     createJson(
                             analyzer,
                             totalLines
                     );
-
 
             sendResponse(
                     exchange,
@@ -360,7 +312,6 @@ public class Server {
                     "application/json; charset=UTF-8",
                     json
             );
-
 
         } catch (Exception e) {
 
@@ -396,17 +347,14 @@ public class Server {
                 return;
             }
 
-
             String contentType =
                     exchange.getRequestHeaders()
                             .getFirst("Content-Type");
 
-
             if (contentType == null
                     || !contentType
-                    .startsWith(
-                            "multipart/form-data"
-                    )) {
+                    .toLowerCase()
+                    .startsWith("multipart/form-data")) {
 
                 sendResponse(
                         exchange,
@@ -418,10 +366,8 @@ public class Server {
                 return;
             }
 
-
             String boundary =
                     getBoundary(contentType);
-
 
             if (boundary == null) {
 
@@ -435,19 +381,16 @@ public class Server {
                 return;
             }
 
-
             byte[] requestData =
                     readAllBytes(
                             exchange.getRequestBody()
                     );
-
 
             byte[] fileData =
                     extractUploadedFile(
                             requestData,
                             boundary
                     );
-
 
             if (fileData == null
                     || fileData.length == 0) {
@@ -462,26 +405,21 @@ public class Server {
                 return;
             }
 
-
             LogAnalyzer analyzer =
                     new LogAnalyzer();
 
-
             int totalLines = 0;
-
 
             try (BufferedReader reader =
                          new BufferedReader(
-                                 new InputStreamReader(
-                                         new ByteArrayInputStream(
+                                 new java.io.InputStreamReader(
+                                         new java.io.ByteArrayInputStream(
                                                  fileData
                                          ),
                                          StandardCharsets.UTF_8
-                                 )
-                         )) {
+                                 ))) {
 
                 String line;
-
 
                 while ((line =
                         reader.readLine()) != null) {
@@ -492,13 +430,11 @@ public class Server {
                 }
             }
 
-
             String json =
                     createJson(
                             analyzer,
                             totalLines
                     );
-
 
             sendResponse(
                     exchange,
@@ -506,7 +442,6 @@ public class Server {
                     "application/json; charset=UTF-8",
                     json
             );
-
 
         } catch (Exception e) {
 
@@ -530,11 +465,9 @@ public class Server {
         String[] parts =
                 contentType.split(";");
 
-
         for (String part : parts) {
 
             part = part.trim();
-
 
             if (part.startsWith("boundary=")) {
 
@@ -542,7 +475,6 @@ public class Server {
                         part.substring(
                                 "boundary=".length()
                         );
-
 
                 if (boundary.startsWith("\"")
                         && boundary.endsWith("\"")) {
@@ -554,11 +486,9 @@ public class Server {
                             );
                 }
 
-
                 return boundary;
             }
         }
-
 
         return null;
     }
@@ -575,13 +505,10 @@ public class Server {
         ByteArrayOutputStream output =
                 new ByteArrayOutputStream();
 
-
         byte[] buffer =
                 new byte[8192];
 
-
         int bytesRead;
-
 
         while ((bytesRead =
                 input.read(buffer)) != -1) {
@@ -592,7 +519,6 @@ public class Server {
                     bytesRead
             );
         }
-
 
         return output.toByteArray();
     }
@@ -612,20 +538,15 @@ public class Server {
                         StandardCharsets.ISO_8859_1
                 );
 
-
         String marker =
                 "--" + boundary;
-
 
         int headerStart =
                 body.indexOf(marker);
 
-
         if (headerStart == -1) {
-
             return null;
         }
-
 
         int headerEnd =
                 body.indexOf(
@@ -633,23 +554,18 @@ public class Server {
                         headerStart
                 );
 
-
         if (headerEnd == -1) {
-
             return null;
         }
 
-
         int fileStart =
                 headerEnd + 4;
-
 
         int fileEnd =
                 body.indexOf(
                         "\r\n" + marker,
                         fileStart
                 );
-
 
         if (fileEnd == -1) {
 
@@ -660,13 +576,11 @@ public class Server {
                     );
         }
 
-
         if (fileEnd == -1
                 || fileEnd <= fileStart) {
 
             return null;
         }
-
 
         return java.util.Arrays.copyOfRange(
                 data,
@@ -728,36 +642,20 @@ public class Server {
                         StandardCharsets.UTF_8
                 );
 
-
         exchange.getResponseHeaders().set(
                 "Content-Type",
                 contentType
         );
-
 
         exchange.getResponseHeaders().set(
                 "Access-Control-Allow-Origin",
                 "*"
         );
 
-
-        exchange.getResponseHeaders().set(
-                "Access-Control-Allow-Methods",
-                "GET, POST, OPTIONS"
-        );
-
-
-        exchange.getResponseHeaders().set(
-                "Access-Control-Allow-Headers",
-                "Content-Type"
-        );
-
-
         exchange.sendResponseHeaders(
                 status,
                 response.length
         );
-
 
         try (OutputStream output =
                      exchange.getResponseBody()) {
@@ -779,9 +677,8 @@ public class Server {
 
             String error =
                     "{\"error\":\""
-                            + escapeJson(message)
-                            + "\"}";
-
+                    + escapeJson(message)
+                    + "\"}";
 
             sendResponse(
                     exchange,
@@ -789,7 +686,6 @@ public class Server {
                     "application/json; charset=UTF-8",
                     error
             );
-
 
         } catch (IOException ignored) {
         }
@@ -804,10 +700,8 @@ public class Server {
             String text) {
 
         if (text == null) {
-
             return "Unknown error";
         }
-
 
         return text
                 .replace("\\", "\\\\")
@@ -816,3 +710,4 @@ public class Server {
                 .replace("\n", "\\n");
     }
 }
+```
