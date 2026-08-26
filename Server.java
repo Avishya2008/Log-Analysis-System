@@ -3,7 +3,6 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -51,10 +50,11 @@ public class Server {
             System.out.println("       LOG ANALYSIS WEB SERVER");
             System.out.println("======================================");
 
-            HttpServer server = HttpServer.create(
-                new InetSocketAddress("0.0.0.0", port),
-                0
-            );
+            HttpServer server =
+                HttpServer.create(
+                    new InetSocketAddress("0.0.0.0", port),
+                    0
+                );
 
             server.createContext("/", new FrontendHandler());
             server.createContext("/api/analyze", new AnalyzeHandler());
@@ -66,33 +66,20 @@ public class Server {
 
             server.start();
 
-            System.out.println();
             System.out.println("Server started successfully!");
-            System.out.println();
             System.out.println("Port: " + port);
-            System.out.println();
-            System.out.println("Website:");
-            System.out.println(
-                "http://localhost:" + port
-            );
-            System.out.println();
-            System.out.println("Upload API:");
-            System.out.println(
-                "http://localhost:" + port + "/api/upload"
-            );
-            System.out.println();
-            System.out.println("Keep this server running.");
-            System.out.println();
+            System.out.println("Website: http://localhost:" + port);
+            System.out.println("Upload API: /api/upload");
+            System.out.println("Analysis API: /api/analyze");
+            System.out.println("======================================");
 
         } catch (Exception e) {
 
-            System.err.println(
-                "Unable to start server."
-            );
-
+            System.err.println("Unable to start server.");
             e.printStackTrace();
         }
     }
+
 
     // ============================================================
     // PORT
@@ -103,10 +90,8 @@ public class Server {
         String port =
             System.getenv("PORT");
 
-        if (
-            port != null &&
-            !port.trim().isEmpty()
-        ) {
+        if (port != null &&
+            !port.trim().isEmpty()) {
 
             try {
 
@@ -121,6 +106,7 @@ public class Server {
         return DEFAULT_PORT;
     }
 
+
     // ============================================================
     // FRONTEND
     // ============================================================
@@ -134,49 +120,38 @@ public class Server {
         ) throws IOException {
 
             String method =
-                exchange
-                    .getRequestMethod()
+                exchange.getRequestMethod()
                     .toUpperCase();
 
             String path =
-                exchange
-                    .getRequestURI()
+                exchange.getRequestURI()
                     .getPath();
 
             System.out.println(
-                "Requested " +
-                method +
-                " file: " +
-                path
+                "Requested file: " + path +
+                " [" + method + "]"
             );
 
-            // ----------------------------------------------------
-            // OPTIONS
-            // ----------------------------------------------------
-
-            if (method.equals("OPTIONS")) {
-
-                sendEmpty(
-                    exchange,
-                    204
-                );
-
-                return;
-            }
-
-            // ----------------------------------------------------
-            // Only allow frontend pages
-            // ----------------------------------------------------
-
-            if (
-                !path.equals("/") &&
-                !path.equals("/index.html")
-            ) {
+            if (!path.equals("/") &&
+                !path.equals("/index.html")) {
 
                 sendText(
                     exchange,
                     404,
                     "404 - Page Not Found",
+                    "text/plain; charset=UTF-8"
+                );
+
+                return;
+            }
+
+            if (!method.equals("GET") &&
+                !method.equals("HEAD")) {
+
+                sendText(
+                    exchange,
+                    405,
+                    "Method Not Allowed",
                     "text/plain; charset=UTF-8"
                 );
 
@@ -199,9 +174,7 @@ public class Server {
             }
 
             byte[] content =
-                Files.readAllBytes(
-                    frontend
-                );
+                Files.readAllBytes(frontend);
 
             Headers headers =
                 exchange.getResponseHeaders();
@@ -221,10 +194,10 @@ public class Server {
                 "*"
             );
 
-            // ----------------------------------------------------
-            // IMPORTANT:
-            // HEAD requests must NOT have a response body.
-            // ----------------------------------------------------
+            /*
+             * IMPORTANT:
+             * HEAD must NOT write a response body.
+             */
 
             if (method.equals("HEAD")) {
 
@@ -238,44 +211,23 @@ public class Server {
                 return;
             }
 
-            // ----------------------------------------------------
-            // Only GET after this point
-            // ----------------------------------------------------
-
-            if (!method.equals("GET")) {
-
-                sendText(
-                    exchange,
-                    405,
-                    "Method Not Allowed",
-                    "text/plain; charset=UTF-8"
-                );
-
-                return;
-            }
-
             exchange.sendResponseHeaders(
                 200,
                 content.length
             );
 
-            try (
-                OutputStream output =
-                    exchange.getResponseBody()
-            ) {
+            try (OutputStream output =
+                    exchange.getResponseBody()) {
 
                 output.write(content);
                 output.flush();
-
-            } finally {
-
-                exchange.close();
             }
         }
     }
 
+
     // ============================================================
-    // SAMPLE DATASET
+    // SAMPLE ANALYSIS
     // ============================================================
 
     static class AnalyzeHandler
@@ -287,24 +239,28 @@ public class Server {
         ) throws IOException {
 
             String method =
-                exchange
-                    .getRequestMethod()
+                exchange.getRequestMethod()
                     .toUpperCase();
+
+            System.out.println(
+                "API request: /api/analyze [" +
+                method +
+                "]"
+            );
 
             if (method.equals("OPTIONS")) {
 
-                sendEmpty(
+                sendJson(
                     exchange,
-                    204
+                    200,
+                    "{}"
                 );
 
                 return;
             }
 
-            if (
-                !method.equals("GET") &&
-                !method.equals("HEAD")
-            ) {
+            if (!method.equals("GET") &&
+                !method.equals("HEAD")) {
 
                 sendJson(
                     exchange,
@@ -324,17 +280,37 @@ public class Server {
 
                 if (logFile != null) {
 
+                    System.out.println(
+                        "Sample log file: " +
+                        logFile.toAbsolutePath()
+                    );
+
                     content =
                         readFile(logFile);
+
+                } else {
+
+                    System.out.println(
+                        "Sample log file not found."
+                    );
                 }
 
                 Map<String, Object> result =
                     analyzeLogs(content);
 
+                String json =
+                    resultToJson(result);
+
+                System.out.println(
+                    "Sample analysis complete. " +
+                    "Total logs = " +
+                    result.get("totalLogs")
+                );
+
                 sendJson(
                     exchange,
                     200,
-                    resultToJson(result)
+                    json
                 );
 
             } catch (Exception e) {
@@ -350,6 +326,7 @@ public class Server {
         }
     }
 
+
     // ============================================================
     // UPLOAD
     // ============================================================
@@ -363,32 +340,44 @@ public class Server {
         ) throws IOException {
 
             String method =
-                exchange
-                    .getRequestMethod()
+                exchange.getRequestMethod()
                     .toUpperCase();
 
             System.out.println(
-                "Upload request received. Method: " +
+                "======================================"
+            );
+
+            System.out.println(
+                "UPLOAD API REQUEST: " +
                 method
             );
 
-            // ----------------------------------------------------
-            // OPTIONS
-            // ----------------------------------------------------
+            System.out.println(
+                "Content-Type: " +
+                exchange.getRequestHeaders()
+                    .getFirst("Content-Type")
+            );
+
+            System.out.println(
+                "Content-Length: " +
+                exchange.getRequestHeaders()
+                    .getFirst("Content-Length")
+            );
+
+            System.out.println(
+                "======================================"
+            );
 
             if (method.equals("OPTIONS")) {
 
-                sendEmpty(
+                sendJson(
                     exchange,
-                    204
+                    200,
+                    "{}"
                 );
 
                 return;
             }
-
-            // ----------------------------------------------------
-            // POST only
-            // ----------------------------------------------------
 
             if (!method.equals("POST")) {
 
@@ -404,48 +393,54 @@ public class Server {
             try {
 
                 String contentType =
-                    exchange
-                        .getRequestHeaders()
+                    exchange.getRequestHeaders()
                         .getFirst("Content-Type");
 
-                System.out.println(
-                    "Upload Content-Type: " +
-                    contentType
-                );
+                /*
+                 * IMPORTANT FIX:
+                 *
+                 * The current index.html sends:
+                 *
+                 * text/plain; charset=UTF-8
+                 *
+                 * Therefore we directly read the request body
+                 * as the uploaded log file.
+                 */
 
-                if (contentType == null) {
+                if (contentType == null ||
+                    !contentType
+                        .toLowerCase()
+                        .startsWith("text/plain")) {
+
+                    System.out.println(
+                        "Unexpected Content-Type: " +
+                        contentType
+                    );
 
                     sendJson(
                         exchange,
                         400,
-                        "{\"error\":\"Missing Content-Type\"}"
+                        "{\"error\":\"Expected text/plain request body\"}"
                     );
 
                     return;
                 }
 
-                // ------------------------------------------------
-                // READ REQUEST BODY
-                //
-                // The current index.html sends:
-                //
-                // Content-Type:
-                // text/plain; charset=UTF-8
-                //
-                // Therefore we read the body directly.
-                // ------------------------------------------------
-
-                byte[] body =
-                    readRequestBody(
+                String uploadedText =
+                    readRequestBodyAsText(
                         exchange.getRequestBody()
                     );
 
                 System.out.println(
-                    "Received upload bytes: " +
-                    body.length
+                    "Received uploaded text."
                 );
 
-                if (body.length == 0) {
+                System.out.println(
+                    "Characters received: " +
+                    uploadedText.length()
+                );
+
+                if (uploadedText.trim().isEmpty()) {
 
                     sendJson(
                         exchange,
@@ -456,59 +451,6 @@ public class Server {
                     return;
                 }
 
-                String uploadedText;
-
-                // ------------------------------------------------
-                // Support BOTH:
-                //
-                // 1. text/plain
-                // 2. multipart/form-data
-                // ------------------------------------------------
-
-                if (
-                    contentType
-                        .toLowerCase()
-                        .startsWith("multipart/form-data")
-                ) {
-
-                    uploadedText =
-                        extractUploadedFile(
-                            body,
-                            contentType
-                        );
-
-                } else {
-
-                    uploadedText =
-                        new String(
-                            body,
-                            StandardCharsets.UTF_8
-                        );
-                }
-
-                if (
-                    uploadedText == null ||
-                    uploadedText.trim().isEmpty()
-                ) {
-
-                    sendJson(
-                        exchange,
-                        400,
-                        "{\"error\":\"Could not read uploaded file or file is empty\"}"
-                    );
-
-                    return;
-                }
-
-                System.out.println(
-                    "Uploaded text length: " +
-                    uploadedText.length()
-                );
-
-                // ------------------------------------------------
-                // ANALYZE
-                // ------------------------------------------------
-
                 Map<String, Object> result =
                     analyzeLogs(uploadedText);
 
@@ -516,7 +458,32 @@ public class Server {
                     resultToJson(result);
 
                 System.out.println(
-                    "Analysis completed successfully."
+                    "UPLOAD ANALYSIS COMPLETE"
+                );
+
+                System.out.println(
+                    "Total logs: " +
+                    result.get("totalLogs")
+                );
+
+                System.out.println(
+                    "Info: " +
+                    result.get("info")
+                );
+
+                System.out.println(
+                    "Warnings: " +
+                    result.get("warnings")
+                );
+
+                System.out.println(
+                    "Errors: " +
+                    result.get("errors")
+                );
+
+                System.out.println(
+                    "Critical: " +
+                    result.get("critical")
                 );
 
                 sendJson(
@@ -542,26 +509,23 @@ public class Server {
         }
     }
 
+
     // ============================================================
-    // FRONTEND FILE
+    // FILE HELPERS
     // ============================================================
 
     private static Path findFrontendFile() {
 
-        for (
-            String location :
-            FRONTEND_PATHS
-        ) {
+        for (String location :
+            FRONTEND_PATHS) {
 
             try {
 
                 Path path =
                     Paths.get(location);
 
-                if (
-                    Files.exists(path) &&
-                    Files.isRegularFile(path)
-                ) {
+                if (Files.exists(path) &&
+                    Files.isRegularFile(path)) {
 
                     return path;
                 }
@@ -573,26 +537,19 @@ public class Server {
         return null;
     }
 
-    // ============================================================
-    // SAMPLE LOG FILE
-    // ============================================================
 
     private static Path findSampleLogFile() {
 
-        for (
-            String location :
-            SAMPLE_LOG_PATHS
-        ) {
+        for (String location :
+            SAMPLE_LOG_PATHS) {
 
             try {
 
                 Path path =
                     Paths.get(location);
 
-                if (
-                    Files.exists(path) &&
-                    Files.isRegularFile(path)
-                ) {
+                if (Files.exists(path) &&
+                    Files.isRegularFile(path)) {
 
                     return path;
                 }
@@ -604,9 +561,6 @@ public class Server {
         return null;
     }
 
-    // ============================================================
-    // READ FILE
-    // ============================================================
 
     private static String readFile(
         Path path
@@ -621,16 +575,13 @@ public class Server {
         );
     }
 
-    // ============================================================
-    // READ REQUEST BODY
-    // ============================================================
 
-    private static byte[] readRequestBody(
+    private static String readRequestBodyAsText(
         InputStream input
     ) throws IOException {
 
-        ByteArrayOutputStream output =
-            new ByteArrayOutputStream();
+        StringBuilder result =
+            new StringBuilder();
 
         byte[] buffer =
             new byte[8192];
@@ -638,19 +589,22 @@ public class Server {
         int length;
 
         while (
-            (length =
-                input.read(buffer)) != -1
+            (length = input.read(buffer)) != -1
         ) {
 
-            output.write(
-                buffer,
-                0,
-                length
+            result.append(
+                new String(
+                    buffer,
+                    0,
+                    length,
+                    StandardCharsets.UTF_8
+                )
             );
         }
 
-        return output.toByteArray();
+        return result.toString();
     }
+
 
     // ============================================================
     // LOG ANALYSIS
@@ -662,7 +616,7 @@ public class Server {
     ) {
 
         Map<String, Object> result =
-            new LinkedHashMap<String, Object>();
+            new LinkedHashMap<>();
 
         int totalLogs = 0;
         int info = 0;
@@ -671,19 +625,13 @@ public class Server {
         int critical = 0;
 
         Map<String, Integer> statusCounts =
-            new LinkedHashMap<String, Integer>();
+            new LinkedHashMap<>();
 
         Map<String, Integer> errorPatterns =
-            new LinkedHashMap<String, Integer>();
+            new LinkedHashMap<>();
 
-        // --------------------------------------------------------
-        // EMPTY DATASET
-        // --------------------------------------------------------
-
-        if (
-            content == null ||
-            content.trim().isEmpty()
-        ) {
+        if (content == null ||
+            content.trim().isEmpty()) {
 
             result.put(
                 "totalLogs",
@@ -723,35 +671,19 @@ public class Server {
             return result;
         }
 
-        // --------------------------------------------------------
-        // SPLIT LOG LINES
-        // --------------------------------------------------------
-
         String[] lines =
             content.split("\\r?\\n");
-
-        // --------------------------------------------------------
-        // HTTP STATUS CODE
-        // --------------------------------------------------------
 
         Pattern httpPattern =
             Pattern.compile(
                 "\\b([1-5][0-9]{2})\\b"
             );
 
-        // --------------------------------------------------------
-        // ANALYZE EACH LINE
-        // --------------------------------------------------------
+        for (String line :
+            lines) {
 
-        for (
-            String line :
-            lines
-        ) {
-
-            if (
-                line == null ||
-                line.trim().isEmpty()
-            ) {
+            if (line == null ||
+                line.trim().isEmpty()) {
 
                 continue;
             }
@@ -760,10 +692,6 @@ public class Server {
 
             String upper =
                 line.toUpperCase();
-
-            // ----------------------------------------------------
-            // SEVERITY
-            // ----------------------------------------------------
 
             if (
                 containsWord(
@@ -809,16 +737,10 @@ public class Server {
                 info++;
             }
 
-            // ----------------------------------------------------
-            // HTTP STATUS CODES
-            // ----------------------------------------------------
-
             Matcher matcher =
                 httpPattern.matcher(line);
 
-            while (
-                matcher.find()
-            ) {
+            while (matcher.find()) {
 
                 String status =
                     matcher.group(1);
@@ -832,9 +754,7 @@ public class Server {
                 ) {
 
                     Integer old =
-                        statusCounts.get(
-                            status
-                        );
+                        statusCounts.get(status);
 
                     statusCounts.put(
                         status,
@@ -842,9 +762,6 @@ public class Server {
                             ? 1
                             : old + 1
                     );
-
-                    // 4xx and 5xx are treated
-                    // as error patterns.
 
                     if (code >= 400) {
 
@@ -863,10 +780,6 @@ public class Server {
                 }
             }
         }
-
-        // --------------------------------------------------------
-        // RESULT
-        // --------------------------------------------------------
 
         result.put(
             "totalLogs",
@@ -910,9 +823,6 @@ public class Server {
         return result;
     }
 
-    // ============================================================
-    // WORD CHECK
-    // ============================================================
 
     private static boolean containsWord(
         String text,
@@ -929,19 +839,17 @@ public class Server {
             .find();
     }
 
-    // ============================================================
-    // SORT MAP
-    // ============================================================
 
     private static Map<String, Integer>
     sortMapByValueDescending(
         Map<String, Integer> input
     ) {
 
-        List<Map.Entry<String, Integer>> entries =
-            new ArrayList<Map.Entry<String, Integer>>(
-                input.entrySet()
-            );
+        List<Map.Entry<String, Integer>>
+            entries =
+                new ArrayList<>(
+                    input.entrySet()
+                );
 
         entries.sort(
             (a, b) ->
@@ -952,7 +860,7 @@ public class Server {
         );
 
         Map<String, Integer> sorted =
-            new LinkedHashMap<String, Integer>();
+            new LinkedHashMap<>();
 
         for (
             Map.Entry<String, Integer> entry :
@@ -968,211 +876,9 @@ public class Server {
         return sorted;
     }
 
-    // ============================================================
-    // MULTIPART EXTRACTION
-    // ============================================================
-
-    private static String extractUploadedFile(
-        byte[] body,
-        String contentType
-    ) {
-
-        try {
-
-            String boundary =
-                getBoundary(
-                    contentType
-                );
-
-            if (boundary == null) {
-                return null;
-            }
-
-            byte[] boundaryBytes =
-                (
-                    "--" +
-                    boundary
-                ).getBytes(
-                    StandardCharsets.ISO_8859_1
-                );
-
-            int firstBoundary =
-                indexOf(
-                    body,
-                    boundaryBytes,
-                    0
-                );
-
-            if (firstBoundary < 0) {
-                return null;
-            }
-
-            int headerStart =
-                firstBoundary +
-                boundaryBytes.length;
-
-            int headerEnd =
-                indexOf(
-                    body,
-                    new byte[] {
-                        '\r',
-                        '\n',
-                        '\r',
-                        '\n'
-                    },
-                    headerStart
-                );
-
-            if (headerEnd < 0) {
-                return null;
-            }
-
-            String headers =
-                new String(
-                    body,
-                    headerStart,
-                    headerEnd - headerStart,
-                    StandardCharsets.ISO_8859_1
-                );
-
-            if (
-                !headers
-                    .toLowerCase()
-                    .contains("filename=")
-            ) {
-
-                return null;
-            }
-
-            int dataStart =
-                headerEnd + 4;
-
-            byte[] endBoundary =
-                (
-                    "\r\n--" +
-                    boundary
-                ).getBytes(
-                    StandardCharsets.ISO_8859_1
-                );
-
-            int dataEnd =
-                indexOf(
-                    body,
-                    endBoundary,
-                    dataStart
-                );
-
-            if (dataEnd < 0) {
-
-                dataEnd =
-                    body.length;
-            }
-
-            if (dataEnd < dataStart) {
-                return null;
-            }
-
-            return new String(
-                body,
-                dataStart,
-                dataEnd - dataStart,
-                StandardCharsets.UTF_8
-            );
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            return null;
-        }
-    }
 
     // ============================================================
-    // BOUNDARY
-    // ============================================================
-
-    private static String getBoundary(
-        String contentType
-    ) {
-
-        Pattern pattern =
-            Pattern.compile(
-                "boundary\\s*=\\s*(\"[^\"]+\"|[^;]+)",
-                Pattern.CASE_INSENSITIVE
-            );
-
-        Matcher matcher =
-            pattern.matcher(
-                contentType
-            );
-
-        if (!matcher.find()) {
-            return null;
-        }
-
-        String boundary =
-            matcher.group(1).trim();
-
-        if (
-            boundary.startsWith("\"") &&
-            boundary.endsWith("\"")
-        ) {
-
-            boundary =
-                boundary.substring(
-                    1,
-                    boundary.length() - 1
-                );
-        }
-
-        return boundary;
-    }
-
-    // ============================================================
-    // BYTE ARRAY SEARCH
-    // ============================================================
-
-    private static int indexOf(
-        byte[] source,
-        byte[] target,
-        int start
-    ) {
-
-        if (target.length == 0) {
-            return start;
-        }
-
-        outer:
-
-        for (
-            int i = start;
-            i <= source.length - target.length;
-            i++
-        ) {
-
-            for (
-                int j = 0;
-                j < target.length;
-                j++
-            ) {
-
-                if (
-                    source[i + j] !=
-                    target[j]
-                ) {
-
-                    continue outer;
-                }
-            }
-
-            return i;
-        }
-
-        return -1;
-    }
-
-    // ============================================================
-    // JSON RESULT
+    // JSON
     // ============================================================
 
     private static String resultToJson(
@@ -1240,9 +946,6 @@ public class Server {
         return json.toString();
     }
 
-    // ============================================================
-    // MAP TO JSON
-    // ============================================================
 
     private static String mapToJson(
         Map<String, Integer> map
@@ -1283,11 +986,9 @@ public class Server {
         return json.toString();
     }
 
-    // ============================================================
-    // ERROR PATTERNS JSON
-    // ============================================================
 
-    private static String errorPatternsToJson(
+    private static String
+    errorPatternsToJson(
         Map<String, Integer> map
     ) {
 
@@ -1333,14 +1034,15 @@ public class Server {
                 )
                 .append(",");
 
-            json.append("\"description\":\"")
+            json.append(
+                "\"description\":\""
+            )
                 .append(
                     jsonEscape(
                         description
                     )
                 )
                 .append("\"}");
-
         }
 
         json.append("}");
@@ -1348,21 +1050,17 @@ public class Server {
         return json.toString();
     }
 
+
     // ============================================================
     // HTTP STATUS DESCRIPTION
     // ============================================================
 
-    private static String getStatusDescription(
+    private static String
+    getStatusDescription(
         int status
     ) {
 
         switch (status) {
-
-            case 100:
-                return "Continue";
-
-            case 101:
-                return "Switching Protocols";
 
             case 200:
                 return "OK";
@@ -1388,12 +1086,6 @@ public class Server {
             case 304:
                 return "Not Modified";
 
-            case 307:
-                return "Temporary Redirect";
-
-            case 308:
-                return "Permanent Redirect";
-
             case 400:
                 return "Bad Request";
 
@@ -1414,9 +1106,6 @@ public class Server {
 
             case 409:
                 return "Conflict";
-
-            case 410:
-                return "Gone";
 
             case 429:
                 return "Too Many Requests";
@@ -1441,8 +1130,9 @@ public class Server {
         }
     }
 
+
     // ============================================================
-    // SEND JSON
+    // RESPONSE HELPERS
     // ============================================================
 
     private static void sendJson(
@@ -1479,15 +1169,11 @@ public class Server {
             "Content-Type"
         );
 
-        // --------------------------------------------------------
-        // HEAD must never send body
-        // --------------------------------------------------------
+        String method =
+            exchange.getRequestMethod()
+                .toUpperCase();
 
-        if (
-            exchange
-                .getRequestMethod()
-                .equalsIgnoreCase("HEAD")
-        ) {
+        if (method.equals("HEAD")) {
 
             exchange.sendResponseHeaders(
                 status,
@@ -1504,23 +1190,14 @@ public class Server {
             data.length
         );
 
-        try (
-            OutputStream output =
-                exchange.getResponseBody()
-        ) {
+        try (OutputStream output =
+                exchange.getResponseBody()) {
 
             output.write(data);
             output.flush();
-
-        } finally {
-
-            exchange.close();
         }
     }
 
-    // ============================================================
-    // SEND TEXT
-    // ============================================================
 
     private static void sendText(
         HttpExchange exchange,
@@ -1547,15 +1224,11 @@ public class Server {
             "*"
         );
 
-        // --------------------------------------------------------
-        // HEAD must never send body
-        // --------------------------------------------------------
+        String method =
+            exchange.getRequestMethod()
+                .toUpperCase();
 
-        if (
-            exchange
-                .getRequestMethod()
-                .equalsIgnoreCase("HEAD")
-        ) {
+        if (method.equals("HEAD")) {
 
             exchange.sendResponseHeaders(
                 status,
@@ -1572,54 +1245,14 @@ public class Server {
             data.length
         );
 
-        try (
-            OutputStream output =
-                exchange.getResponseBody()
-        ) {
+        try (OutputStream output =
+                exchange.getResponseBody()) {
 
             output.write(data);
             output.flush();
-
-        } finally {
-
-            exchange.close();
         }
     }
 
-    // ============================================================
-    // SEND EMPTY RESPONSE
-    // ============================================================
-
-    private static void sendEmpty(
-        HttpExchange exchange,
-        int status
-    ) throws IOException {
-
-        Headers headers =
-            exchange.getResponseHeaders();
-
-        headers.set(
-            "Access-Control-Allow-Origin",
-            "*"
-        );
-
-        headers.set(
-            "Access-Control-Allow-Methods",
-            "GET, POST, OPTIONS, HEAD"
-        );
-
-        headers.set(
-            "Access-Control-Allow-Headers",
-            "Content-Type"
-        );
-
-        exchange.sendResponseHeaders(
-            status,
-            -1
-        );
-
-        exchange.close();
-    }
 
     // ============================================================
     // JSON ESCAPE
@@ -1634,25 +1267,10 @@ public class Server {
         }
 
         return value
-            .replace(
-                "\\",
-                "\\\\"
-            )
-            .replace(
-                "\"",
-                "\\\""
-            )
-            .replace(
-                "\r",
-                "\\r"
-            )
-            .replace(
-                "\n",
-                "\\n"
-            )
-            .replace(
-                "\t",
-                "\\t"
-            );
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            .replace("\t", "\\t");
     }
 }
